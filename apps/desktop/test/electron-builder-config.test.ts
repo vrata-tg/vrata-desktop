@@ -15,10 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { z } from "zod";
 import { describe, expect, it } from "vitest";
-import {
-  createDesktopReleaseInfo,
-  DESKTOP_AUTO_UPDATE_FEED_CONFIG,
-} from "../src/desktop-update-provider.js";
+import { DESKTOP_AUTO_UPDATE_FEED_CONFIG } from "../src/desktop-update-provider.js";
 
 const desktopPackageRoot = process.cwd();
 const require = createRequire(resolve(desktopPackageRoot, "package.json"));
@@ -46,7 +43,7 @@ const macConfigSchema = z
     hardenedRuntime: z.literal(true),
     icon: z.string().min(1),
     identity: z.string().nullable().optional(),
-    notarize: z.boolean(),
+    notarize: z.boolean().optional(),
     target: z.tuple([
       z
         .object({
@@ -67,7 +64,7 @@ const macConfigSchema = z
 const linuxConfigSchema = z
   .object({
     category: z.literal("Development"),
-    executableName: z.enum(["bb", "bb-nightly"]),
+    executableName: z.literal("vrata-bb"),
     icon: z.string().min(1),
     target: z.tuple([
       z
@@ -112,7 +109,7 @@ const electronBuilderConfigSchema = z
     publish: z.tuple([
       z
         .object({
-          channel: z.enum(["latest", "nightly"]),
+          channel: z.literal("latest"),
           provider: z.literal("generic"),
           url: z.string().min(1),
         })
@@ -528,7 +525,7 @@ describe("electron-builder signing config", () => {
 
     expect(config.linux).toMatchObject({
       category: "Development",
-      executableName: "bb",
+      executableName: "vrata-bb",
       target: [{ arch: ["x64"], target: "AppImage" }],
     });
     expect(config.toolsets.appimage).toBe("1.0.3");
@@ -574,49 +571,34 @@ describe("electron-builder signing config", () => {
     );
   });
 
-  it("keeps the updater provider pointed at desktop-latest release assets", async () => {
+  it("keeps the updater provider pointed at the latest Vrata release assets", async () => {
     const config = await readStaticConfig();
 
     expect(config.publish[0]).toMatchObject(DESKTOP_AUTO_UPDATE_FEED_CONFIG);
     expect(DESKTOP_AUTO_UPDATE_FEED_CONFIG.url).toBe(
-      "https://github.com/get-bb/bb/releases/download/desktop-latest/",
+      "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/",
     );
   });
 
-  it("creates a separate nightly app identity and update feed", async () => {
-    const { config } = await readResolvedConfig({
-      BB_DESKTOP_RELEASE_CHANNEL: "nightly",
-    });
-    const nightlyRelease = createDesktopReleaseInfo("nightly");
+  it.each(["nightly", "canary"])(
+    "rejects the unsupported %s release channel",
+    async (channel) => {
+      const result = await runConfigScript({
+        BB_DESKTOP_RELEASE_CHANNEL: channel,
+      });
 
-    expect(config.appId).toBe("dev.bb.desktop.nightly");
-    expect(config.productName).toBe("bb Nightly");
-    expect(config.artifactName).toBe("bb-nightly-${version}-${arch}.${ext}");
-    expect(config.linux.icon).toBe("assets/icon-nightly.png");
-    expect(config.linux.executableName).toBe("bb-nightly");
-    expect(config.mac.icon).toBe("assets/icon-nightly.icns");
-    await expect(
-      access(resolve(desktopPackageRoot, config.mac.icon)),
-    ).resolves.toBeUndefined();
-    await expect(
-      access(resolve(desktopPackageRoot, "assets/icon-nightly.png")),
-    ).resolves.toBeUndefined();
-    expect(config.publish[0]).toEqual({
-      channel: "nightly",
-      provider: "generic",
-      url: nightlyRelease.updateReleaseBaseUrl,
-    });
-  });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain(
+        "BB_DESKTOP_RELEASE_CHANNEL must be latest",
+      );
+    },
+  );
 
-  it("rejects unknown desktop release channels", async () => {
-    const result = await runConfigScript({
-      BB_DESKTOP_RELEASE_CHANNEL: "canary",
-    });
+  it("leaves signing and notarization policy to the signing wrapper", async () => {
+    const config = await readStaticConfig();
 
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain(
-      "BB_DESKTOP_RELEASE_CHANNEL must be latest or nightly",
-    );
+    expect(config.mac).not.toHaveProperty("identity");
+    expect(config.mac).not.toHaveProperty("notarize");
   });
 
   it("signs local builds via keychain auto-discovery when signing secrets are absent", async () => {

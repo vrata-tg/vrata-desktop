@@ -13,6 +13,7 @@ import { homedir, hostname } from "node:os";
 import { join, resolve } from "node:path";
 import { createServer } from "node:net";
 import { mutateManagedJsonFile } from "@bb/config/managed-json-file";
+import { resolveProdDataDir } from "@bb/config/runtime";
 import { z } from "zod";
 
 const serverUrlSchema = z
@@ -140,7 +141,8 @@ export async function enrollMachine(
       ),
   );
   if (
-    dataDir === resolve(home, ".bb") &&
+    (dataDir === resolve(home, ".bb") ||
+      dataDir === resolveProdDataDir({ homeDir: home })) &&
     (await readOptional(join(dataDir, "host-id")))?.trim() !== bootstrap.hostId
   )
     throw new Error(

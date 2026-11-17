@@ -17,6 +17,7 @@ import {
   parsePortValue,
   resolvePortFromEnv,
   resolveRuntimeDataDir,
+  resolveInheritedDevSkillsRootPaths,
 } from "../src/runtime.js";
 import { loadServerPortConfig } from "../src/server-port.js";
 import { loadServerConfig } from "../src/server.js";
@@ -78,7 +79,7 @@ describe("common config", () => {
         },
         homeDir: "/Users/tester",
       }).BB_DATA_DIR,
-    ).toBe(path.normalize("/Users/tester/.bb"));
+    ).toBe(path.normalize("/Users/tester/.vrata-bb"));
   });
 
   it("requires repoRoot or BB_DATA_DIR for development data dir resolution", () => {
@@ -672,8 +673,8 @@ describe("consumer-specific config", () => {
       },
     });
 
-    expect(cliConfig.BB_SERVER_URL).toBe("http://127.0.0.1:38886");
-    expect(cliConfig.BB_HOST_DAEMON_PORT).toBe(38887);
+    expect(cliConfig.BB_SERVER_URL).toBe("http://127.0.0.1:38986");
+    expect(cliConfig.BB_HOST_DAEMON_PORT).toBe(38987);
   });
 
   it("lets explicit CLI env overrides win over NODE_ENV-selected defaults", () => {
@@ -815,5 +816,52 @@ describe("consumer-specific config", () => {
     });
 
     expect(hostDaemonEntrypointConfig).toEqual({});
+  });
+});
+
+describe("Vrata profile defaults", () => {
+  it("uses one isolated production profile and connection for server, daemon and CLI", () => {
+    const args = { env: { NODE_ENV: "production" }, homeDir: "/Users/tester" };
+    const server = loadServerConfig(args);
+    const cli = loadCliConfig(args);
+    const daemon = loadHostDaemonConfig({ ...args, serverUrl: cli.BB_SERVER_URL });
+    expect(server.BB_DATA_DIR).toBe(path.normalize("/Users/tester/.vrata-bb"));
+    expect(daemon.BB_DATA_DIR).toBe(server.BB_DATA_DIR);
+    expect(server.BB_SERVER_PORT).toBe(38986);
+    expect(server.BB_HOST_DAEMON_PORT).toBe(38987);
+    expect(daemon.BB_HOST_DAEMON_PORT).toBe(server.BB_HOST_DAEMON_PORT);
+    expect(daemon.BB_SERVER_URL).toBe("http://127.0.0.1:38986");
+    expect(cli.BB_SERVER_URL).toBe(daemon.BB_SERVER_URL);
+    expect(cli.BB_HOST_DAEMON_PORT).toBe(daemon.BB_HOST_DAEMON_PORT);
+  });
+
+  it("inherits development skills from the Vrata profile", () => {
+    expect(
+      resolveInheritedDevSkillsRootPaths({
+        homeDir: "/Users/tester",
+        repoRoot: "/Users/tester/src/bb",
+      }),
+    ).toEqual([path.normalize("/Users/tester/.vrata-bb/skills")]);
+  });
+
+  it("keeps explicit production data and connection settings", () => {
+    const args = {
+      env: {
+        NODE_ENV: "production",
+        BB_DATA_DIR: "/existing/profile",
+        BB_SERVER_PORT: "40001",
+        BB_HOST_DAEMON_PORT: "40002",
+        BB_SERVER_URL: "http://localhost:40001",
+      },
+    };
+    expect(loadServerConfig(args).BB_DATA_DIR).toBe(
+      path.resolve("/existing/profile"),
+    );
+    expect(loadServerConfig(args).BB_SERVER_PORT).toBe(40001);
+    expect(loadHostDaemonConfig(args).BB_DATA_DIR).toBe(
+      path.resolve("/existing/profile"),
+    );
+    expect(loadHostDaemonConfig(args).BB_HOST_DAEMON_PORT).toBe(40002);
+    expect(loadCliConfig(args).BB_SERVER_URL).toBe("http://localhost:40001");
   });
 });

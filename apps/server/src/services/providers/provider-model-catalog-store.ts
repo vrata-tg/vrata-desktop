@@ -510,6 +510,10 @@ export function createProviderModelCatalogStore(options: {
       return;
     }
     entry.refresh = null;
+    if (refresh.markedStale && !settlement.ok) {
+      log("info", { outcome: "superseded", changed: false });
+      return;
+    }
     const before = pickerView(entry, refresh.fingerprint);
     let level: "info" | "warn" | "error" = "info";
     let fields: Record<string, unknown>;
@@ -609,7 +613,8 @@ export function createProviderModelCatalogStore(options: {
     entry: CatalogEntry,
     launch: CatalogLaunch,
   ): Promise<void> {
-    return entry.refresh?.fingerprint === launch.fingerprint
+    return entry.refresh?.fingerprint === launch.fingerprint &&
+      !entry.refresh.markedStale
       ? entry.refresh.promise
       : startRefresh(deps, entry, launch);
   }

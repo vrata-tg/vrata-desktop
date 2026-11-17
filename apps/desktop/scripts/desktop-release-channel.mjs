@@ -5,12 +5,12 @@ export function resolveDesktopReleaseChannel(env) {
   if (rawChannel === undefined || rawChannel.length === 0) {
     return "latest";
   }
-  if (rawChannel === "latest" || rawChannel === "nightly") {
+  if (rawChannel === "latest") {
     return rawChannel;
   }
 
   throw new Error(
-    `${DESKTOP_RELEASE_CHANNEL_ENV_NAME} must be latest or nightly, got ${rawChannel}.`,
+    `${DESKTOP_RELEASE_CHANNEL_ENV_NAME} must be latest, got ${rawChannel}.`,
   );
 }
 
@@ -31,43 +31,22 @@ export function resolveDesktopBuildPlatform(nodePlatform) {
 }
 
 export function createDesktopReleaseConfig(channel) {
-  if (channel === "nightly") {
-    return {
-      appId: "dev.bb.desktop.nightly",
-      applicationName: "bb Nightly",
-      artifactName: "bb-nightly-${version}-${arch}.${ext}",
-      iconFileName: "icon-nightly.png",
-      // The Linux binary name must differ from stable so both channels can be
-      // installed at once without one shadowing the other on PATH.
-      linuxExecutableName: "bb-nightly",
-      macIconPath: "assets/icon-nightly.icns",
-      releaseTag: "desktop-nightly",
-      windowsInstallName: "bb-nightly",
-      updateMetadataFileNames: {
-        linux: "nightly-linux.yml",
-        macos: "nightly-mac.yml",
-        windows: "nightly.yml",
-      },
-    };
-  }
-
   return {
-    appId: "dev.bb.desktop",
-    applicationName: "bb",
-    artifactName: "${productName}-${version}-${arch}.${ext}",
+    appId: "tg.vrata.bb",
+    applicationName: "Vrata Desktop",
+    artifactName: "vrata-bb-${version}-${arch}.${ext}",
     iconFileName: "icon.png",
-    linuxExecutableName: "bb",
+    linuxExecutableName: "vrata-bb",
     macIconPath: "assets/icon.icns",
-    releaseTag: "desktop-latest",
-    windowsInstallName: "bb",
+    windowsInstallName: "vrata-bb",
     updateMetadataFileNames: {
-      linux: "latest-linux.yml",
-      macos: "latest-mac.yml",
-      windows: "latest.yml",
+      linux: `${channel}-linux.yml`,
+      macos: `${channel}-mac.yml`,
+      windows: `${channel}.yml`,
     },
   };
 }
 
-export function createDesktopUpdateReleaseBaseUrl(releaseTag) {
-  return `https://github.com/get-bb/bb/releases/download/${releaseTag}/`;
+export function createDesktopUpdateReleaseBaseUrl() {
+  return "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/";
 }

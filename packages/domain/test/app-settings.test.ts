@@ -39,3 +39,25 @@ describe("managedBranchPrefixSchema", () => {
     );
   });
 });
+
+describe("Vrata provider default", () => {
+  it("starts a new profile with Vrata and unfinished onboarding", () => {
+    expect(appSettingsSchema.parse(defaultAppSettings)).toMatchObject({
+      defaultProviderId: "vrata",
+      onboardingCompletedAt: null,
+    });
+  });
+
+  it.each([null, "codex", "vrata"])(
+    "preserves an explicit provider choice: %s",
+    (defaultProviderId) => {
+      const settings = {
+        ...defaultAppSettings,
+        defaultProviderId,
+        providerOrder: ["codex", "vrata"],
+        onboardingCompletedAt: "2026-10-23T00:00:00.000Z",
+      };
+      expect(appSettingsSchema.parse(settings)).toEqual(settings);
+    },
+  );
+});

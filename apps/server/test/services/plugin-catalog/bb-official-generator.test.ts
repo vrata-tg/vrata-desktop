@@ -154,6 +154,67 @@ describe("bb-official marketplace generator", () => {
     ).toThrow(/unknown bundled plugin blocks: gamma/u);
   });
 
+  it("reads the Vrata runtime manifest instead of the adapter workspace manifest", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "vrata-catalog-"));
+    cleanup.push(root);
+    const adapter = path.join(root, "plugins", "vrata");
+    const runtime = path.join(adapter, ".bundled-runtime");
+    await mkdir(runtime, { recursive: true });
+    await writeFile(
+      path.join(adapter, "package.json"),
+      JSON.stringify({
+        name: "@vrata-desktop/bundled-plugin",
+        version: "0.0.1",
+        private: true,
+      }),
+    );
+    await writeFile(
+      path.join(runtime, "package.json"),
+      JSON.stringify({
+        name: "@vrata-ai/bb-plugin",
+        version: "0.1.14",
+        bb: {
+          name: "Врата AI",
+          description: "Vrata provider",
+          branding: { icon: "./media/vrata.svg" },
+          server: "./dist/server.js",
+        },
+      }),
+    );
+    const catalogFieldsPath = path.join(root, "plugins", "bb-official.json");
+    await writeFile(
+      catalogFieldsPath,
+      JSON.stringify({
+        vrata: { category: "agents-and-providers", screenshots: [] },
+      }),
+    );
+    const outputPath = path.join(root, "marketplace.json");
+    await generateBbOfficialMarketplace({
+      repositoryRoot: root,
+      catalogFieldsPath,
+      outputPath,
+      plugins: [
+        {
+          name: "vrata",
+          pluginId: "bb-plugin",
+          autoInstall: true,
+          defaultEnabled: true,
+        },
+      ],
+      warn: () => {},
+    });
+    const catalog = parseBundledMarketplaceManifestJson(
+      await readFile(outputPath, "utf8"),
+      "Vrata catalog",
+    );
+    expect(catalog.plugins).toHaveLength(1);
+    expect(catalog.plugins[0]).toMatchObject({
+      id: "bb-plugin",
+      displayName: "Врата AI",
+      source: { bundled: { plugin: "vrata" } },
+    });
+  });
+
   it("folds a bundled plugin PLUGIN_OVERVIEW.md into its entry and rejects unsafe text", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "bb-official-overview-"));
     cleanup.push(root);
@@ -240,9 +301,13 @@ describe("bb-official marketplace generator", () => {
       },
     });
 
-    expect(dates.get("sample")).toEqual({
-      publishedAt: "2026-01-02T03:04:05Z",
-      updatedAt: "2026-02-03T04:05:06Z",
+    const sample = dates.get("sample");
+    expect({
+      publishedAt: sample && new Date(sample.publishedAt).toISOString(),
+      updatedAt: sample && new Date(sample.updatedAt).toISOString(),
+    }).toEqual({
+      publishedAt: "2026-01-02T03:04:05.000Z",
+      updatedAt: "2026-02-03T04:05:06.000Z",
     });
   });
 

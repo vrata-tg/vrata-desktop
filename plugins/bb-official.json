@@ -204,5 +204,9 @@
   "storage-retention": {
     "category": "tasks-and-workflows",
     "screenshots": []
+  },
+  "vrata": {
+    "category": "agents-and-providers",
+    "screenshots": []
   }
 }

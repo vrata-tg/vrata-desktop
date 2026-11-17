@@ -339,6 +339,12 @@ export function registerSystemRoutes(
           : diagnosticValue,
     });
     setAppSettings(deps.db, updatedSettings);
+    if (
+      current.onboardingCompletedAt === null &&
+      updatedSettings.onboardingCompletedAt !== null
+    ) {
+      deps.lifecycleDedupers.providerModelCatalogs.markAllStale();
+    }
     if (current.telemetryEnabled && !updatedSettings.telemetryEnabled) {
       deps.telemetry.capture({ name: "telemetry_disabled" });
     }

@@ -184,10 +184,6 @@ function resolveElectronBuilderConfig(baseConfig, env, electronBuilderArgs) {
     executableName: releaseConfig.linuxExecutableName,
     icon: "assets/" + releaseConfig.iconFileName,
   };
-  config.win = {
-    ...config.win,
-    icon: "assets/" + releaseConfig.iconFileName,
-  };
   if (electronBuilderArgs.includes("--win")) {
     config.extraMetadata = {
       ...config.extraMetadata,
@@ -201,7 +197,7 @@ function resolveElectronBuilderConfig(baseConfig, env, electronBuilderArgs) {
     {
       channel: releaseChannel,
       provider: "generic",
-      url: createDesktopUpdateReleaseBaseUrl(releaseConfig.releaseTag),
+      url: createDesktopUpdateReleaseBaseUrl(),
     },
   ];
 

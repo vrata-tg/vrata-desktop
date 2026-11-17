@@ -1,6 +1,6 @@
-# @bb/desktop
+# Vrata Desktop
 
-macOS, Linux, and Windows Electron shell for bb. The desktop app loads the existing bb
+macOS, Linux, and Windows Electron shell for Vrata. The desktop app loads the existing bb
 web UI and uses the packaged `bb-app` launcher for server and host-daemon
 lifecycle.
 
@@ -182,14 +182,13 @@ pnpm exec turbo run desktop:build:win --filter=@bb/desktop
 pnpm exec turbo run smoke:packaged --filter=@bb/desktop
 ```
 
-`desktop:build:win` writes `release/bb-<version>-x64.exe`, a one-click per-user
-NSIS installer that installs to `%LOCALAPPDATA%\Programs\bb` (`bb-nightly` on
-the nightly channel) without elevation, plus `latest.yml` for electron-updater.
+`desktop:build:win` writes `release/vrata-bb-<version>-x64.exe`, a one-click per-user
+NSIS installer that installs to `%LOCALAPPDATA%\Programs\bb` without
+elevation, plus `latest.yml` for electron-updater.
 Without a signing certificate the installer is unsigned, so Windows SmartScreen
 warns before running it. electron-builder signs it when `WIN_CSC_LINK` (a
-base64 `.pfx`) and `WIN_CSC_KEY_PASSWORD` are set; the release workflows pass
-them from the `WINDOWS_CERTIFICATE_PFX` and `WINDOWS_CERTIFICATE_PASSWORD`
-secrets.
+base64 `.pfx`) and `WIN_CSC_KEY_PASSWORD` are set. The Vrata workflow
+currently produces unsigned Windows installers.
 
 `afterPack` copies `@parcel/watcher-win32-x64` into the package when
 electron-builder leaves it out and loads it with the packaged Electron; without
@@ -268,95 +267,80 @@ push code to Linux clients. Treat the release token accordingly.
 
 ## Releasing
 
-`bb-app` and `@bb/desktop` versions are LOCKED in lockstep. The desktop package
-depends on `bb-app: workspace:*`, and the displayed release version string must
-match `packages/bb-app/package.json`.
+The only Vrata Desktop release workflow is
+[Vrata Desktop](../../.github/workflows/vrata-desktop.yml) in
+`vrata-tg/vrata-desktop`. Pull requests build artifacts with read-only repository
+permissions. A public release requires a manual `workflow_dispatch` on `main`
+with `publish=true`; the default is `false`. Every job checks out the event SHA.
+The workflow never bumps versions or fetches a newer plugin.
 
-To bump for a release:
+Keep `apps/desktop/package.json` and `packages/bb-app/package.json` at the same
+plain SemVer, starting at `1.0.0`. Change both in a reviewed diff before release;
+use `1.0.1` for the next patch. Plugin SDK `0.6.149` has its own version. The
+original migration base is BB `0.49.0`, upstream SHA
+`1320c88e8abdd3f145bc9a5c305eace269fb2f28`; release notes record this separately
+from the Vrata Desktop version and the exact bundled plugin pin.
 
-```bash
-node scripts/bump-version.mjs <new-version>
-```
+1. Before merging or enabling Actions, complete the inherited publishing workflow
+   review in [CONTRIBUTING.md](../../CONTRIBUTING.md#updating-from-upstream).
+2. Merge the reviewed version/plugin changes into `main`.
+3. Open Actions → Vrata Desktop → Run workflow, select `main`, and leave
+   `publish=false`. Wait for all three builds and the final full-artifact check.
+4. Review the `vrata-verified-release` artifact, its feeds, `SHA256SUMS`, and
+   installers on native machines. Check the run's commit SHA. If `main` changes,
+   repeat the dry run for that SHA before publishing it.
+5. Configure the complete macOS signing/notarization secret set below. Run the
+   workflow again from the reviewed `main` SHA with `publish=true`. All three
+   platforms rebuild and must pass before the release job can write.
 
-Then commit and ship through the normal `sawyer-next` → `main` flow. You can also
-use `--patch`, `--minor`, or `--major` instead of an explicit version.
+| Platform    | Installers     | electron-updater metadata | Version feed                   |
+| ----------- | -------------- | ------------------------- | ------------------------------ |
+| macOS arm64 | `.dmg`, `.zip` | `latest-mac.yml`          | `desktop-version.json`         |
+| Linux x64   | `.AppImage`    | `latest-linux.yml`        | `desktop-version-linux.json`   |
+| Windows x64 | NSIS `.exe`    | `latest.yml`              | `desktop-version-windows.json` |
 
-CI enforces this lockstep. Direct edits that leave
-`packages/bb-app/package.json` and `apps/desktop/package.json` with different
-versions fail the build. Never edit either package version directly for a
-release; use `scripts/bump-version.mjs` so both files move together.
+Installer basenames are `vrata-bb-<version>-<arch>.<ext>`. Packaging always uses
+`--publish never`. `desktop:version-feed` runs the existing JSON generator
+through Turbo after packaging has produced YAML. The final verifier reads both
+formats, checks version/channel/platform/architecture, file size and SHA-512
+against the actual installers, and rewrites both feeds to immutable URLs under
+`https://github.com/vrata-tg/vrata-desktop/releases/download/vrata-v<version>/`.
+It preserves generated blockmaps and adds SHA-256 checksums for installers,
+metadata and blockmaps. This check also runs when `publish=false`.
 
-The desktop release tag uses the locked version: `desktop-v<version>` for
-immutable releases and `desktop-latest` for the moving pointer.
+The release job creates a draft at the event SHA, uploads the complete asset set,
+then downloads and verifies every asset before publishing it as Latest. A retry
+can fill only a draft with the same version, source SHA and provenance, using
+the original verified artifacts. Retry the failed release job to reuse them. A
+published version, foreign draft, or tag pointing elsewhere blocks publication.
+Immediately before promotion, the candidate must be strictly newer than the
+published Latest SemVer. Runs for `main` share one concurrency group. Never
+replace published assets; corrections need the next version.
 
-`build-desktop.yml` builds macOS, Linux, and Windows in parallel jobs, then
-publishes all three from one job. `publish-bb-app.yml` calls it for both the
-stable release and the nightly channel; dispatching it directly builds
-artifacts without publishing. The moving release resets all of its assets
-on each publish, so a single publisher is what keeps one platform from deleting
-another's binaries. Each platform has its own update feed file inside the same release
-tag:
-
-| Platform | Artifacts              | electron-updater metadata | Version feed                   |
-| -------- | ---------------------- | ------------------------- | ------------------------------ |
-| macOS    | `.dmg`, `.zip` (arm64) | `latest-mac.yml`          | `desktop-version.json`         |
-| Linux    | `.AppImage` (x64)      | `latest-linux.yml`        | `desktop-version-linux.json`   |
-| Windows  | `.exe` installer (x64) | `latest.yml`              | `desktop-version-windows.json` |
-
-macOS keeps the unsuffixed feed name because released macOS builds already
-request it. Linux artifacts are unsigned, and the Windows installer is unsigned
-unless the Windows certificate secrets are configured; only the macOS binaries
-wait on the Apple signing secrets.
-
-## Nightly channel
-
-The scheduled `publish-bb-app.yml` workflow runs from `main` every day at
-3:00 AM Pacific (`America/Los_Angeles`, including daylight-saving changes). It
-derives a unique version such as `0.34.1-nightly.<run-id>.<attempt>` without
-committing that version, publishes `bb-app` with the npm `nightly` dist-tag,
-and builds the desktop app from that same lockstep version.
-
-To publish or dry-run the channel manually from `main`, dispatch the same
-workflow with `npm_tag=nightly`. A non-dry run publishes both npm and desktop;
-a dry run validates only the npm package path.
-
-A stable release also refreshes the channel. A non-dry `npm_tag=latest` run
-publishes the release, then derives the next nightly version from the release
-commit and publishes npm and desktop nightly again. Without this step the
-nightly channel stays below `latest` until the next scheduled run.
-
-The nightly desktop is a separate installation:
-
-- product name: `bb Nightly`
-- bundle identifier: `dev.bb.desktop.nightly`
-- Linux binary name: `bb-nightly`, so it never shadows stable `bb` on PATH
-- app/update release: `desktop-nightly`
-- Windows install directory: `%LOCALAPPDATA%\Programs\bb-nightly`
-- update metadata: `nightly-mac.yml`, `nightly-linux.yml`, and `nightly.yml`
-  (Windows)
-- version feeds: `desktop-version.json` (macOS),
-  `desktop-version-linux.json` (Linux), and `desktop-version-windows.json`
-  (Windows)
-- icon: `assets/icon-nightly.icns` and `assets/icon-nightly.png`
-
-Download it from
-[`desktop-nightly`](https://github.com/get-bb/bb/releases/tag/desktop-nightly)
-or run the CLI build with:
+For focused release-helper verification from the repository root:
 
 ```bash
-npx bb-app@nightly
+pnpm exec turbo run test:vrata-release
+node scripts/vrata-release.mjs --check-config
+node scripts/vrata-release.mjs /path/to/combined-artifacts
 ```
 
-Stable and nightly desktop bundles can coexist. Electron-owned preferences,
-window state, and process supervision use separate application data
-directories; the embedded bb runtime still uses the normal `~/.bb` data and
-default server port unless the corresponding environment variables are
-overridden.
+The helper needs only the checkout and its frozen dependencies. The `upstream`
+remote and upstream history are not release prerequisites.
 
-Nightly builds set `BB_DESKTOP_RELEASE_CHANNEL=nightly` at build time. The value
-is baked into the Electron main/preload bundles and selects the nightly product
-identity, yellow icon, and update URLs. Omit the variable (or set it to
-`latest`) for stable and local builds.
+### First installation over old Vrata
+
+Old Vrata installations still read releases from the old `vrata-bb` repository.
+Download the first Vrata Desktop release manually. Close the old app before
+installing. On macOS, remove only the old `.app` bundle, then drag
+**Vrata Desktop.app** into Applications and launch it. Preserve the existing
+`.vrata-bb` profile, Electron application data and saved credentials. Do not
+uninstall application data. The old release assets remain available.
+
+Verify the profile, provider credentials and onboarding on a test profile before
+using the new installation. Future updates use the existing desktop updater
+between two new Vrata Desktop versions. A packaged update smoke test on each
+supported platform is still required before claiming update readiness.
 
 ## About panel
 
@@ -381,50 +365,49 @@ failing the build.
 
 ## macOS signing + notarization
 
-The desktop package is ready for Developer ID signing and Apple notarization.
-Local builds with no secrets sign via keychain auto-discovery and skip
-notarization. To activate signed and notarized release artifacts, add these
-GitHub Actions secrets:
+The workflow reuses `scripts/run-electron-builder.mjs` for Developer ID signing,
+nested runtime signing and Apple notarization. Configure all five repository
+secrets together:
 
-| Secret                       | Value                                                                                                                                                                                  |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MACOS_CERTIFICATE_P12`      | Base64-encoded `.p12` exported from Keychain Access for a `Developer ID Application` certificate and its private key. On macOS: `base64 -i DeveloperID.p12 -o certificate.base64.txt`. |
-| `MACOS_CERTIFICATE_PASSWORD` | Password used when exporting the `.p12`.                                                                                                                                               |
-| `MACOS_CERTIFICATE_NAME`     | Optional certificate common name, without the `Developer ID Application:` prefix. Leave unset when the `.p12` contains a single usable identity and electron-builder can derive it.    |
-| `APPLE_ID`                   | Apple ID email for the Developer Program account.                                                                                                                                      |
-| `APPLE_APP_PASSWORD`         | App-specific password from `appleid.apple.com` under Sign-In and Security.                                                                                                             |
-| `APPLE_TEAM_ID`              | Developer Team ID from `developer.apple.com/account` membership details.                                                                                                               |
+| Secret                        | Value                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| `CSC_LINK`                    | Base64-encoded Developer ID Application `.p12`, including its private key |
+| `CSC_KEY_PASSWORD`            | Password protecting that `.p12`                                           |
+| `APPLE_ID`                    | Apple Developer account email                                             |
+| `APPLE_APP_SPECIFIC_PASSWORD` | Apple app-specific password                                               |
+| `APPLE_TEAM_ID`               | Developer Team ID                                                         |
 
-Once those secrets are present, the next `Build Desktop` workflow run with
-`publish=true` and `release_channel=stable` signs the `.app`, notarizes it, and
-publishes the signed `.dmg` / `.zip` assets to `desktop-latest`. If no required
-signing secrets are configured, the workflow still builds unsigned artifacts, but
-the release job publishes only `desktop-version.json` and withholds unsigned
-binaries from `desktop-latest`. If only some required signing secrets are set,
-the workflow fails before packaging so a misconfigured release cannot silently
-produce unsigned or signed-but-not-notarized artifacts.
+Only the macOS packaging step of a manual `main` run receives these secrets.
+PRs, other refs and the Linux/Windows/release jobs do not receive them. Missing
+all five permits an unsigned dry run; a partial set fails. `publish=true`
+requires the full set and successful signing/notarization. The workflow verifies
+the packaged app with `codesign`, `spctl` and `stapler`, then records signing
+evidence bound to the event SHA and installer hashes for the release job.
+It never publishes a metadata-only or unsigned macOS release.
+
+For local builds with no secrets, the native wrapper uses keychain identity
+auto-discovery and skips notarization. Configure a usable Developer ID identity
+for signed local builds. Release readiness additionally needs a native packaged
+update smoke test with signed and notarized builds.
 
 ## Auto-update
 
-The renderer update toast keeps using `desktop-version.json` as the lightweight
-feature surface. The installer path uses `electron-updater` against the same
-`desktop-latest` release asset directory and reads `latest-mac.yml`. These
-checks run in parallel on launch, hourly, and when the app becomes active: the
-JSON feed can show "update available" even when CI has published metadata only,
-while the Electron updater only flips the toast to "ready to install" after a
-signed update has actually downloaded. Local dev builds skip Electron auto-update
-unless `BB_DESKTOP_AUTO_UPDATE=1` is set.
+The existing desktop updater reads the platform JSON feed and electron-updater
+YAML from `https://github.com/vrata-tg/vrata-desktop/releases/latest/download/`.
+Both formats point to immutable installers in `vrata-v<version>`. A complete
+release becomes Latest only after all platform assets have been verified.
+The distribution uses one `latest` channel and ordinary SemVer comparisons.
 
-`bb Nightly` follows the equivalent isolated `desktop-nightly` release and
-`nightly-mac.yml`; it never reads or moves the stable feed. The scheduled
-workflow requires the complete signing/notarization secret set before
-publishing nightly desktop assets.
+The upstream updater lifecycle, launch/periodic checks and download/install UI
+remain in use. Local development skips Electron auto-update unless
+`BB_DESKTOP_AUTO_UPDATE=1` is set.
 
-To verify a downloaded or unpacked build:
+To verify an installed macOS build:
 
 ```bash
-spctl --assess --verbose /path/to/bb.app
-codesign --verify --deep --strict --verbose=2 /path/to/bb.app
+spctl --assess --type execute --verbose "/Applications/Vrata Desktop.app"
+codesign --verify --deep --strict --verbose=2 "/Applications/Vrata Desktop.app"
+xcrun stapler validate "/Applications/Vrata Desktop.app"
 ```
 
 ## Debugging
@@ -433,7 +416,7 @@ Use the View menu to toggle DevTools. To open them automatically on launch, set
 `BB_DESKTOP_OPEN_DEVTOOLS=1`:
 
 ```bash
-BB_DESKTOP_OPEN_DEVTOOLS=1 apps/desktop/release/mac-arm64/bb.app/Contents/MacOS/bb
+BB_DESKTOP_OPEN_DEVTOOLS=1 "apps/desktop/release/mac-arm64/Vrata Desktop.app/Contents/MacOS/bb"
 ```
 
 Unpackaged runs use `assets/icon-dev.png` for the Dock and window icon. Set
@@ -441,7 +424,7 @@ Unpackaged runs use `assets/icon-dev.png` for the Dock and window icon. Set
 desktop:worktree` sets it. The bundle's own icon in Finder is unchanged.
 
 Desktop main-process logs are written immediately to `desktop.log` under
-`~/.bb/logs/` or `$BB_DATA_DIR/logs/` when `BB_DATA_DIR` is set, including
+`~/.vrata-bb/logs/` or `$BB_DATA_DIR/logs/` when `BB_DATA_DIR` is set, including
 updater, Connect, and startup failures from launches without a terminal.
 Logs append across launches and rotate at 10 MiB into `desktop.1.log` through
 `desktop.4.log`. When bb-app exits, its captured output is saved
@@ -560,7 +543,7 @@ The native menus, renderer Server popup, and app palette use the same choices.
 
 ### Server moves
 
-After `bb server move`, the old computer's data dir (`~/.bb` or
+After `bb server move`, the old computer's data dir (`~/.vrata-bb` or
 `$BB_DATA_DIR`) contains `server-moved.json`. The desktop app reads it at
 startup, whenever the built-in server target loads, and while that target is active.
 While the target is active, the app watches the data dir. If `fs.watch` fails,

@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve bb.
+Thanks for helping improve Vrata Desktop.
 
 ## Before You Open A Pull Request
 
@@ -47,3 +47,65 @@ If you fix the bug, open a pull request that links the issue as described above.
 For feature requests and UI changes, open an issue and wait for a maintainer's sign-off before you open a pull request.
 
 Feel free to link changes from your fork as prototypes on the issue, but do not open a pull request against this repo until we are aligned on the feature.
+
+## Updating from upstream
+
+`origin` is `https://github.com/vrata-tg/vrata-desktop.git`; `upstream` is
+`https://github.com/get-bb/bb.git`. Add upstream once, then create an update
+branch from the current product `main`:
+
+```bash
+git remote add upstream https://github.com/get-bb/bb.git
+git switch main
+git pull --ff-only origin main
+git switch -c update/bb-main
+git fetch upstream
+git merge upstream/main
+```
+
+If `upstream` already exists, check it with `git remote -v`. Resolve merge
+conflicts by editing the affected files and reviewing both sides, then use
+`git add <resolved-files>` and `git merge --continue`. Use `git merge --abort`
+to abandon an unresolved merge. Run relevant Turbo tests/typechecks and review
+the resulting diff. Merge the update PR with a merge commit that retains
+ancestry; do not squash or rebase upstream-update PRs. The selected upstream
+commit must remain an ancestor of product `main` after merging.
+
+Review the host-daemon protocol version after merging. Vrata's server-move
+commands operate on `~/.vrata-bb`; an upstream daemon that still selects `~/.bb`
+must be rejected by the existing protocol gate and updated before use.
+
+Before merging the update or enabling Actions, review every new/changed
+`.github/workflows/` file. Disable inherited npm publishing, stable/nightly
+desktop publishing and deploy workflows in this fork's Actions settings.
+The inherited paths to disable include:
+
+- `publish-bb-app.yml` and `build-desktop.yml` for npm and upstream desktop releases.
+- `deploy-ai-gateway.yml`, `deploy-connect.yml`, `deploy-connect-next.yml`,
+  `deploy-demo-server.yml` and `deploy-web.yml` for deployment.
+- `mobile-ios-eas.yml` and `mobile-android-eas.yml` for mobile submission and
+  release publication.
+
+Repeat this review after every upstream merge and disable newly introduced
+publishing paths before merging or re-enabling Actions. A workflow absent from
+the Actions registration list still needs review when it is registered from the
+default branch. Repository settings are a separate operator action; changing
+these docs does not disable workflows. Only `vrata-desktop.yml` is the Vrata
+Desktop release path. Ordinary source merges replace the former overlay and
+automated upstream update machinery.
+
+## Updating the bundled Vrata plugin
+
+Keep plugin source in `vrata-tg/vrata-bb-plugin`. Publish a compatible plugin
+there first, then manually change the exact `@vrata-ai/bb-plugin` dependency in
+`plugins/vrata/package.json` and update the ordinary `pnpm-lock.yaml` using pnpm.
+Review the exact version, package integrity and compatibility with the current
+Plugin SDK; run adapter/runtime integration checks through Turbo. The adapter
+stages the published package for bundling. Do not copy plugin source into this
+repository or add dependency patches. Releases use the committed pin and never
+fetch a latest plugin version.
+
+Keep Desktop and `bb-app` at the same plain SemVer in their package manifests.
+The Plugin SDK version is independent. Follow the manual dry-run, artifact
+review and public-release sequence in
+[the desktop release guide](apps/desktop/README.md#releasing).

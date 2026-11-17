@@ -6,7 +6,7 @@ import { createDesktopLogger } from "./desktop-logger.js";
 import { attachServerUpdateControl } from "./server-update-control.js";
 import { registerServerChoiceIpc } from "./server-choice-ipc.js";
 import { randomUUID } from "node:crypto";
-import { accessSync, constants as fsConstants } from "node:fs";
+import { accessSync, constants as fsConstants, mkdirSync } from "node:fs";
 import { arch, homedir, release, type as osType } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import {
@@ -651,7 +651,7 @@ const desktopLogger = createDesktopLogger({ logDir: formatLogDirectory() });
 function resolveDataDirFromEnv(args: ResolveDataDirFromEnvArgs): string {
   const rawDataDir = args.env.BB_DATA_DIR?.trim();
   if (rawDataDir === undefined || rawDataDir.length === 0) {
-    return join(args.homeDir, ".bb");
+    return join(args.homeDir, ".vrata-bb");
   }
   if (rawDataDir === "~") {
     return args.homeDir;
@@ -2909,11 +2909,14 @@ async function initializeRuntime(args: InitializeRuntimeArgs): Promise<void> {
 }
 
 async function runDesktopApp(): Promise<void> {
-  const applicationName = app.isPackaged
-    ? DESKTOP_RELEASE_INFO.applicationName
-    : "bb-dev";
-  app.setName(applicationName);
-  installAboutPanel(applicationName);
+  const profileName = app.isPackaged ? "Vrata BB" : "bb-dev";
+  const profilePath =
+    app.commandLine.getSwitchValue("user-data-dir") ||
+    join(app.getPath("appData"), profileName);
+  mkdirSync(profilePath, { recursive: true });
+  app.setPath("userData", profilePath);
+  app.setPath("sessionData", profilePath);
+  app.setName(profileName);
 
   if (!app.requestSingleInstanceLock()) {
     app.quit();
@@ -2972,16 +2975,14 @@ async function runDesktopApp(): Promise<void> {
     },
   });
 
-  app.setAppUserModelId(
-    DESKTOP_RELEASE_CHANNEL === "nightly"
-      ? "dev.bb.desktop.nightly"
-      : "dev.bb.desktop",
-  );
+  app.setAppUserModelId(DESKTOP_RELEASE_INFO.appId);
   if (app.isPackaged) {
     await hostToolchain.refresh();
     Object.assign(process.env, hostToolchain.environment());
   }
   await app.whenReady();
+  app.setName(DESKTOP_RELEASE_INFO.applicationName);
+  installAboutPanel(DESKTOP_RELEASE_INFO.applicationName);
   if (app.isPackaged) {
     await session.defaultSession.clearCache();
   }

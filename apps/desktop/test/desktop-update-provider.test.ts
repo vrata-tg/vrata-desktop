@@ -1,24 +1,33 @@
 import { describe, expect, it } from "vitest";
 import {
   createDesktopUpdateFeedUrl,
+  DESKTOP_AUTO_UPDATE_FEED_CONFIG,
   resolveDesktopUpdateSupport,
 } from "../src/desktop-update-provider.js";
 
 describe("desktop update feed url", () => {
-  it("gives each platform its own feed file inside one release tag", () => {
+  it("downloads through the same latest Vrata release as version checks", () => {
+    expect(DESKTOP_AUTO_UPDATE_FEED_CONFIG).toEqual({
+      channel: "latest",
+      provider: "generic",
+      url: "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/",
+    });
+  });
+
+  it("gives each platform its own feed file in the latest Vrata release", () => {
     expect(createDesktopUpdateFeedUrl("macos")).toBe(
-      "https://github.com/get-bb/bb/releases/download/desktop-latest/desktop-version.json",
+      "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/desktop-version.json",
     );
     expect(createDesktopUpdateFeedUrl("linux")).toBe(
-      "https://github.com/get-bb/bb/releases/download/desktop-latest/desktop-version-linux.json",
+      "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/desktop-version-linux.json",
     );
     expect(createDesktopUpdateFeedUrl("windows")).toBe(
-      "https://github.com/get-bb/bb/releases/download/desktop-latest/desktop-version-windows.json",
+      "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/desktop-version-windows.json",
     );
   });
 });
 
-const APP_IMAGE_PATH = "/home/user/Apps/bb-0.37.0-x86_64.AppImage";
+const APP_IMAGE_PATH = "/home/user/Apps/vrata-bb-1.0.0-x64.AppImage";
 const alwaysReplaceable = () => true;
 const neverReplaceable = () => false;
 
@@ -83,18 +92,21 @@ describe("desktop update support", () => {
     expect(checked).toEqual([APP_IMAGE_PATH]);
   });
 
-  it("does not consult the filesystem on macOS", () => {
-    let consulted = false;
+  it.each(["macos", "windows"] as const)(
+    "does not consult the AppImage filesystem on %s",
+    (platform) => {
+      let consulted = false;
 
-    resolveDesktopUpdateSupport({
-      canReplaceAppImage: () => {
-        consulted = true;
-        return true;
-      },
-      env: { APPIMAGE: APP_IMAGE_PATH },
-      platform: "macos",
-    });
+      resolveDesktopUpdateSupport({
+        canReplaceAppImage: () => {
+          consulted = true;
+          return true;
+        },
+        env: { APPIMAGE: APP_IMAGE_PATH },
+        platform,
+      });
 
-    expect(consulted).toBe(false);
-  });
+      expect(consulted).toBe(false);
+    },
+  );
 });

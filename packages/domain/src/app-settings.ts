@@ -70,7 +70,7 @@ export const defaultAppSettings: AppSettings = {
   keepHistoryAfterContextClear: false,
   summarizeShellCommands: true,
   providerOrder: [],
-  defaultProviderId: null,
+  defaultProviderId: "vrata",
   providerCompletedTurnDisplay: {},
   streamerMode: false,
   allowFastServiceTier: true,

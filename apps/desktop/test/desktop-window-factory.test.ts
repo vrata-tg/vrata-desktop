@@ -599,6 +599,7 @@ describe("desktop window factory", () => {
 
     expect(firstWindow).not.toBe(secondWindow);
     expect(createdWindows).toHaveLength(2);
+    expect(createdWindows[0]?.options.title).toBe("Vrata Desktop");
     expect(createdWindows[0]?.options.frame).toBe(false);
     expect(createdWindows[0]?.options.minHeight).toBe(MIN_WINDOW_HEIGHT);
     expect(createdWindows[0]?.options.minWidth).toBe(MIN_WINDOW_WIDTH);

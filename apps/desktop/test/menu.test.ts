@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { BaseWindow, MenuItemConstructorOptions } from "electron";
 
 vi.mock("electron", () => ({
-  app: { name: "bb" },
+  app: { name: "Vrata Desktop" },
   Menu: { sendActionToFirstResponder: vi.fn() },
 }));
 
@@ -80,6 +80,16 @@ function findDesktopSettingsServerSubmenu(
 }
 
 describe("application menu", () => {
+  it("uses Vrata Desktop in the application and About menus", () => {
+    const template = buildApplicationMenuTemplate(menuArgs(() => {}));
+    expect(template[0]?.label).toBe("Vrata Desktop");
+    expect(template[0]?.submenu).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "About Vrata Desktop" }),
+      ]),
+    );
+  });
+
   it.each([true, false])(
     "opens local logs independently of runtime ownership (isMac=%s)",
     (isMac) => {

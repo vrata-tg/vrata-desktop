@@ -18,10 +18,7 @@ import {
   type DesktopAutoUpdateNotAvailableHandler,
   type DesktopAutoUpdaterAdapter,
 } from "../src/desktop-auto-update.js";
-import {
-  DESKTOP_AUTO_UPDATE_FEED_CONFIG,
-  type DesktopAutoUpdateFeedConfig,
-} from "../src/desktop-update-provider.js";
+import { type DesktopAutoUpdateFeedConfig } from "../src/desktop-update-provider.js";
 
 const checkedAt = "2026-05-21T00:00:00.000Z";
 
@@ -211,7 +208,7 @@ function createDeferredDownload(): DeferredDownload {
 }
 
 describe("desktop auto-update service", () => {
-  it("configures electron-updater for the desktop-latest GitHub release assets", () => {
+  it("configures electron-updater for the latest Vrata release assets", () => {
     const updater = new DesktopAutoUpdaterAdapterStub();
     const messages = createLoggerMessages();
 
@@ -225,7 +222,13 @@ describe("desktop auto-update service", () => {
       updater,
     });
 
-    expect(updater.feedConfigs).toEqual([DESKTOP_AUTO_UPDATE_FEED_CONFIG]);
+    expect(updater.feedConfigs).toEqual([
+      {
+        channel: "latest",
+        provider: "generic",
+        url: "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/",
+      },
+    ]);
     expect(updater.autoDownload).toBe(false);
     expect(updater.autoInstallOnAppQuit).toBe(true);
     expect(updater.forceDevUpdateConfig).toBe(false);

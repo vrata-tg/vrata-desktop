@@ -1203,6 +1203,34 @@ describe("provider model catalog store", () => {
     });
   });
 
+  it("loads the authenticated catalog when a stale refresh fails before the next picker read", async () => {
+    await withTestHarness(async (harness) => {
+      const host = setupCatalogHost(harness, {
+        id: "host-catalog-stale-auth-failure",
+      });
+      const held = createDeferredPromise<HostRpcHandlerResult>();
+      host.setAnswer(() => held.promise);
+      const initialRead = host.read("codex");
+      try {
+        await vi.waitFor(() => {
+          expect(host.listRequests("codex")).toHaveLength(1);
+        });
+        host.store.markAllStale();
+        host.setAnswer(() => catalogAnswer(modelList("authenticated-model")));
+        held.resolve(errorAnswer("auth_required"));
+        await initialRead;
+
+        const response = await host.read("codex");
+        expect(modelIds(response)).toEqual(["authenticated-model"]);
+        expect(response.modelLoadError).toBeNull();
+        expect(host.listRequests("codex")).toHaveLength(2);
+      } finally {
+        held.resolve(errorAnswer("auth_required"));
+        await initialRead;
+      }
+    });
+  });
+
   it("never evicts an entry with an in-flight refresh and reloads evicted entries from SQLite", async () => {
     await withTestHarness(async (harness) => {
       const host = setupCatalogHost(harness, {

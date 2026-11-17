@@ -80,7 +80,7 @@ import { WindowFindHost } from "./components/layout/WindowFindHost";
 import { DesktopZoomIndicator } from "./components/layout/DesktopZoomIndicator";
 import { ProviderCliInstallLogDialogHost } from "./components/provider-cli/provider-cli-install";
 import { ServerMoveOverlay } from "./components/machines/ServerMoveOverlay";
-import { OnboardingGate } from "./components/onboarding/OnboardingGate";
+import { OnboardingGate } from "./components/onboarding/VrataOnboardingGate";
 import { AppUpdateHost } from "./components/app-update/AppUpdateHost";
 import { PluginInstallJobsHost } from "./components/plugin/PluginInstallJobsHost";
 import { RouteLoadingSkeleton } from "./components/ui/route-loading-skeleton";

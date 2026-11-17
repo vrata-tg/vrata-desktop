@@ -77,7 +77,7 @@ const desktopVersionFeed: BbDesktopVersionFeed = {
   path: updateMetadata.path,
   platform: buildPlatform,
   releaseDate: updateMetadata.releaseDate,
-  releaseName: `${releaseConfig.applicationName} desktop ${packageJson.version}`,
+  releaseName: `${releaseConfig.applicationName} ${packageJson.version}`,
   releaseNotes: null,
   schemaVersion: 1,
   sha512: updateMetadata.sha512,
