@@ -7,6 +7,27 @@
     "PSModuleAnalysisCachePath"
   ],
   "tasks": {
+    "//#test:vrata-release": {
+      "cache": false,
+      "inputs": [
+        "scripts/vrata-release*.mjs",
+        ".github/workflows/vrata-desktop.yml",
+        "apps/desktop/package.json",
+        "packages/bb-app/package.json",
+        "plugins/vrata/package.json"
+      ]
+    },
+    "@bb/desktop#desktop:version-feed": {
+      "cache": false,
+      "inputs": [
+        "scripts/generate-version-feed.mts",
+        "scripts/desktop-release-channel.mjs",
+        "package.json",
+        "release/latest*.yml"
+      ],
+      "outputs": ["release/desktop-version*.json", "release/latest*.yml"],
+      "env": ["BB_DESKTOP_RELEASE_CHANNEL"]
+    },
     "@bb/server#validate:marketplace": {
       "dependsOn": ["topo"],
       "cache": false
@@ -211,6 +232,26 @@
         "$TURBO_ROOT$/packages/bb-app/package.json"
       ],
       "outputs": ["dist/**"]
+    },
+    "@vrata-desktop/bundled-plugin#prepare:bundled": {
+      "dependsOn": [
+        "@bb/plugin-build#generate",
+        "@get-bb/plugin-sdk#build",
+        "topo"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!.bundled-runtime/**",
+        "$TURBO_ROOT$/packages/bb-app/package.json",
+        "$TURBO_ROOT$/packages/plugin-build/src/**",
+        "$TURBO_ROOT$/packages/domain/src/**",
+        "$TURBO_ROOT$/packages/plugin-sdk/src/**"
+      ],
+      "outputs": [".bundled-runtime/**"]
+    },
+    "@vrata-desktop/bundled-plugin#test": {
+      "dependsOn": ["prepare:bundled"],
+      "cache": false
     },
     "prepare:bundled": {
       "dependsOn": ["topo", "^build"],
@@ -541,7 +582,7 @@
       "dependsOn": ["^topo", "@bb/server#generate:bb-official-marketplace"]
     },
     "@bb/server#generate:bb-official-marketplace": {
-      "dependsOn": [],
+      "dependsOn": ["@vrata-desktop/bundled-plugin#prepare:bundled"],
       "inputs": [
         "scripts/generate-bb-official-marketplace.ts",
         "src/services/plugin-catalog/bundled-marketplace-paths.ts",
@@ -697,13 +738,8 @@
         "$TURBO_ROOT$/.github/actions/setup-workspace/**",
         "$TURBO_ROOT$/.github/actions/setup-workspace-tools/**",
         "$TURBO_ROOT$/.github/actions/cache-workspace/**",
-        "$TURBO_ROOT$/.github/workflows/ci.yml",
-        "$TURBO_ROOT$/.github/workflows/ci-cache-maintenance.yml",
         "$TURBO_ROOT$/scripts/lib/**",
         "$TURBO_ROOT$/scripts/forkable-plugins.json",
-        "$TURBO_ROOT$/.github/APPROVED_CONTRIBUTORS",
-        "$TURBO_ROOT$/.github/workflows/approve-contributor.yml",
-        "$TURBO_ROOT$/.github/workflows/pr-gate.yml",
         "$TURBO_ROOT$/package.json",
         "$TURBO_ROOT$/scripts/*.mjs",
         "$TURBO_ROOT$/turbo.json",
@@ -753,7 +789,11 @@
       "passThroughEnv": ["UPDATE_PARITY_ROW_COUNTS"]
     },
     "test": {
-      "env": ["BB_QUERY_PLAN_EXECUTED", "BB_QUERY_PLAN_REPORT", "VITEST_MAX_WORKERS"],
+      "env": [
+        "BB_QUERY_PLAN_EXECUTED",
+        "BB_QUERY_PLAN_REPORT",
+        "VITEST_MAX_WORKERS"
+      ],
       "dependsOn": ["//#ensure-native-modules", "topo"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/vitest*.ts"],
       "outputs": [".query-plan/**"],
@@ -792,7 +832,12 @@
     // bundling step — so the SDK dist must exist before the suite runs. The
     // marketplace parity suites read apps/web's published JSON schemas.
     "@bb/server#test": {
-      "env": ["BB_CI_TEST_SHARD", "BB_QUERY_PLAN_EXECUTED", "BB_QUERY_PLAN_REPORT", "VITEST_MAX_WORKERS"],
+      "env": [
+        "BB_CI_TEST_SHARD",
+        "BB_QUERY_PLAN_EXECUTED",
+        "BB_QUERY_PLAN_REPORT",
+        "VITEST_MAX_WORKERS"
+      ],
       "outputs": [".query-plan/**"],
       "dependsOn": [
         "@bb/agent-runtime#generate:test-bridges",

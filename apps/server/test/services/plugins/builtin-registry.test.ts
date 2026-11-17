@@ -17,6 +17,7 @@ const UNPREFIXED_BUNDLED_PLUGIN_IDS = [
   "bb-account",
   "bb-ai",
   "bb-guide",
+  "bb-plugin",
   "browser-automation",
   "concurrency-limit",
   "connect",

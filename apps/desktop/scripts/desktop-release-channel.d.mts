@@ -1,22 +1,21 @@
-export type DesktopReleaseChannel = "latest" | "nightly";
+export type DesktopReleaseChannel = "latest";
 export type DesktopBuildPlatform = "macos" | "linux" | "windows";
 
 export interface DesktopUpdateMetadataFileNames {
-  linux: "latest-linux.yml" | "nightly-linux.yml";
-  macos: "latest-mac.yml" | "nightly-mac.yml";
-  windows: "latest.yml" | "nightly.yml";
+  linux: "latest-linux.yml";
+  macos: "latest-mac.yml";
+  windows: "latest.yml";
 }
 
 export interface DesktopReleaseConfig {
-  appId: "dev.bb.desktop" | "dev.bb.desktop.nightly";
-  applicationName: "bb" | "bb Nightly";
+  appId: "tg.vrata.bb";
+  applicationName: "Vrata Desktop";
   artifactName: string;
-  iconFileName: "icon.png" | "icon-nightly.png";
-  linuxExecutableName: "bb" | "bb-nightly";
-  macIconPath: "assets/icon.icns" | "assets/icon-nightly.icns";
-  releaseTag: "desktop-latest" | "desktop-nightly";
+  iconFileName: "icon.png";
+  linuxExecutableName: "vrata-bb";
+  macIconPath: "assets/icon.icns";
   updateMetadataFileNames: DesktopUpdateMetadataFileNames;
-  windowsInstallName: "bb" | "bb-nightly";
+  windowsInstallName: "vrata-bb";
 }
 
 export function resolveDesktopReleaseChannel(
@@ -31,6 +30,4 @@ export function createDesktopReleaseConfig(
   channel: DesktopReleaseChannel,
 ): DesktopReleaseConfig;
 
-export function createDesktopUpdateReleaseBaseUrl(
-  releaseTag: DesktopReleaseConfig["releaseTag"],
-): string;
+export function createDesktopUpdateReleaseBaseUrl(): string;

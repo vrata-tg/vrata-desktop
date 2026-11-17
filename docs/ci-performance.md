@@ -1,5 +1,7 @@
 # CI performance
 
+This document describes the upstream CI matrix and performance work. Vrata Desktop has removed that matrix; see [current CI coverage](platform-support.md#ci-and-validation). The routing, cache and timing descriptions below are upstream reference only.
+
 The main CI workflow keeps build, lint/typecheck, two server test shards, eight app test
 shards, integration tests, three package test groups, two plugin test groups, two fork
 check shards, and package smokes independent. Node 24/26 compatibility smokes run on

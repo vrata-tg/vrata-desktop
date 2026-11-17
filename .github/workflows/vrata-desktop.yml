@@ -1,0 +1,193 @@
+name: Vrata Desktop
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish verified installers and advance the Vrata Desktop update channel
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vrata-desktop-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BB_DESKTOP_RELEASE_CHANNEL: latest
+
+jobs:
+  build:
+    if: github.repository == 'vrata-tg/vrata-desktop'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: macos
+            arch: arm64
+            task: desktop:build
+          - runner: ubuntu-22.04
+            platform: linux
+            arch: x64
+            task: desktop:build:linux
+          - runner: windows-2025
+            platform: windows
+            arch: x64
+            task: desktop:build:win
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.19.0
+          package-manager-cache: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: 9.15.0
+          run_install: false
+      - name: Install pinned build dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter @bb/desktop... --filter @bb/app... --filter @bb/server... --filter @bb/host-daemon... --filter @bb/cli... --filter @bb/bundled-plugins...
+      - name: Validate release contracts and committed versions
+        run: |
+          pnpm exec turbo run test:vrata-release --output-logs=errors-only
+          node scripts/vrata-release.mjs --check-config
+      - name: Typecheck desktop integration
+        if: matrix.platform != 'windows'
+        run: pnpm exec turbo run typecheck --filter=@bb/desktop --filter=bb-app --filter=@bb/app --filter=@bb/server --filter=@bb/cli --filter=@bb/host-daemon --output-logs=errors-only
+      - name: Test onboarding
+        run: pnpm exec turbo run test --filter=@bb/app --output-logs=errors-only -- VrataOnboardingGate
+      - name: Test data profile isolation
+        run: pnpm exec turbo run test --filter=@bb/cli --filter=@bb/host-daemon --output-logs=errors-only -- machine-enrollment.test.ts server-move/service.test.ts protocol-self-update.test.ts
+      - name: Test pinned Vrata runtime
+        run: pnpm exec turbo run test --filter=@vrata-desktop/bundled-plugin --output-logs=errors-only
+      - name: Test server desktop integration
+        run: pnpm exec turbo run test --filter=@bb/server --output-logs=errors-only -- CatalogOnboarding provider-model-catalog-store general-settings desktop-app-update bb-official-generator builtin-registry internal-session-protocol-version.test.ts
+      - name: Test updater integration
+        run: pnpm exec turbo run test --filter=@bb/desktop --output-logs=errors-only -- VrataDistribution VrataDesktopUpdates desktop-update-provider desktop-update-check desktop-auto-update
+      - name: Check runner architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: node -e 'if (process.arch !== process.env.EXPECTED_ARCH) process.exit(1)'
+      - name: Package and verify installers
+        env:
+          PACKAGE_TASK: ${{ matrix.task }}
+          BUILD_PLATFORM: ${{ matrix.platform }}
+          VRATA_PUBLISH: ${{ github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main' }}
+          CSC_LINK: ${{ matrix.platform == 'macos' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.platform == 'macos' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ matrix.platform == 'macos' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'macos' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.platform == 'macos' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && secrets.APPLE_TEAM_ID || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "$BUILD_PLATFORM" == macos ]]; then
+            signing_mode="$(node scripts/vrata-release.mjs --check-signing)"
+            if [[ "$signing_mode" == unsigned ]]; then
+              export CSC_IDENTITY_AUTO_DISCOVERY=false
+            fi
+          fi
+          pnpm exec turbo run "$PACKAGE_TASK" --filter=@bb/desktop --output-logs=errors-only
+          if [[ "$BUILD_PLATFORM" == macos && "$signing_mode" == signed ]]; then
+            app="apps/desktop/release/mac-arm64/Vrata Desktop.app"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            spctl --assess --type execute --verbose=2 "$app"
+            xcrun stapler validate "$app"
+            node scripts/vrata-release.mjs apps/desktop/release --record-signing
+          fi
+      - name: Smoke test packaged app
+        if: matrix.platform != 'linux'
+        run: pnpm exec turbo run smoke:packaged --filter=@bb/desktop --output-logs=errors-only
+      - name: Smoke test Linux app
+        if: matrix.platform == 'linux'
+        run: xvfb-run -a pnpm exec turbo run smoke:packaged --filter=@bb/desktop --output-logs=errors-only
+      - name: Generate platform update feed
+        run: pnpm exec turbo run desktop:version-feed --filter=@bb/desktop --output-logs=errors-only
+      - name: Check tracked sources stayed unchanged
+        run: git diff --exit-code
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: vrata-desktop-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.blockmap
+            apps/desktop/release/latest*.yml
+            apps/desktop/release/desktop-version*.json
+            apps/desktop/release/macos-signing.json
+          if-no-files-found: error
+
+  verify:
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.19.0
+          package-manager-cache: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: 9.15.0
+          run_install: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts --filter @bb/desktop...
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          pattern: vrata-desktop-*
+          path: release
+          merge-multiple: true
+      - name: Verify all three platforms and freeze feeds and checksums
+        run: node scripts/vrata-release.mjs release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: vrata-verified-release
+          path: release/*
+          if-no-files-found: error
+
+  release:
+    needs: [build, verify]
+    if: github.repository == 'vrata-tg/vrata-desktop' && github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.19.0
+          package-manager-cache: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          version: 9.15.0
+          run_install: false
+      - run: pnpm install --frozen-lockfile --ignore-scripts --filter @bb/desktop...
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: vrata-verified-release
+          path: release
+      - name: Verify draft assets and promote immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VRATA_PUBLISH: ${{ inputs.publish }}
+        run: node scripts/vrata-release.mjs release --publish

@@ -35,6 +35,7 @@ export function accountPoolDefaultEnabled(
 const REPO_PLUGINS_DIRECTORY_NAME = "plugins";
 
 export const BUILTIN_PLUGINS = [
+  { name: "vrata", pluginId: "bb-plugin", defaultEnabled: true },
   {
     name: "storage-retention",
     pluginId: "bb--storage-retention",

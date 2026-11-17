@@ -33,7 +33,7 @@ function nodeCommand(script: string) {
 }
 
 describe("Windows installer mutex name", () => {
-  it.each(["latest", "nightly"] as const)(
+  it.each(["latest"] as const)(
     "matches the APP_GUID electron-builder gives the %s NSIS installer",
     (channel) => {
       const electronBuilderGuid = loadElectronBuilderUuid();

@@ -18,7 +18,7 @@ typography, persisted server-side and applied live to every open window.
 Light/dark mode is a separate per-client setting the theme layers on top of.
 Custom themes live on
 disk, one folder per theme, at <bb-data-dir>/theme/<name>/theme.css (the packaged
-app uses ~/.bb/theme/…). The folder name is the theme id.
+app uses ~/.vrata-bb/theme/…). The folder name is the theme id.
 
 bb theme list Built-in and custom themes; shows the active one
 bb theme dir Print the custom-theme directory (where to author)
@@ -82,7 +82,7 @@ identified by its plugin and its id, so two plugins may use the same id; pass
 message through the current choice. Settings → AI services has the same
 controls. Each plugin chooses its own model. The removed `BB_INFERENCE`,
 `BB_INFERENCE_FALLBACK`, and `BB_TRANSCRIPTION` variables are ignored with a
-warning in `~/.bb/config.json`, and `bb-app config set` refuses them.
+warning in `~/.vrata-bb/config.json`, and `bb-app config set` refuses them.
 
 General keys: `bb settings general` accepts any key from `generalSettings` in
 `bb settings show`; an unknown key or wrongly shaped value is rejected with the
@@ -123,7 +123,7 @@ General. Machine-related keys (`machineServerUrl`, `defaultMachineAccess`,
   Linux browsers use native primary selection for middle-click paste,
   independently of this preference, never the regular clipboard as a fallback.
 - `streamerMode` (default false) hides every `customModels` entry from
-  `~/.bb/config.json` in all model lists (pickers, `bb provider models`, and
+  `~/.vrata-bb/config.json` in all model lists (pickers, `bb provider models`, and
   the SDK) during a screen share. The entries stay in the config file; a
   request that names a hidden model still runs with it, and default model
   resolution still sees the full list.
@@ -139,7 +139,7 @@ General. Machine-related keys (`machineServerUrl`, `defaultMachineAccess`,
   prefix. bb rejects a prefix that cannot start a valid git branch name.
   Existing branches keep their names.
 - `providerOrder` (default `[]`) is a JSON array of provider ids, and
-  `defaultProviderId` (default `null`) names the default provider; `null`
+  `defaultProviderId` (default `"vrata"` for new profiles) names the default provider; `null`
   clears it.
 - `idleProviderSessionTimeoutMinutes` (default `30`; Settings → Providers → Configuration → Release idle agent sessions) sets how long an agent can sit idle after its last turn before every machine stops its provider process. Allowed values are `0` (ASAP), `5`, `10`, `30`, and `60`, for example `bb settings general idleProviderSessionTimeoutMinutes 5`. Machines check every five minutes, so release can take up to five minutes beyond the timeout. Changes apply live and on reconnect. Only restorable sessions without active or pending work are eligible; threads keep their history and resume on the next message. `bb thread stop` still releases a runtime manually. This is not a limit on loaded processes or memory. Read the value with `bb settings show`; SDK callers use `system.config()` and `system.updateGeneralSettings({ ...config.generalSettings, idleProviderSessionTimeoutMinutes: 5 })`.
 - `telemetryEnabled`: see Telemetry below.
@@ -157,8 +157,8 @@ Command line: Settings → General → Command line puts the `bb` command on PAT
 on the computer that runs the bb server, so the user, a script, or an agent
 running outside bb (such as Claude Code or Codex) can control bb; threads in bb
 already have `bb`. `bb settings cli-command` shows the state, and `install` or
-`remove` changes it. Install links the launcher at `~/.bb/bin/bb` into a PATH
-folder such as `~/.local/bin` (on Windows it adds `~/.bb/bin` to the user
+`remove` changes it. Install links the launcher at `~/.vrata-bb/bin/bb` into a PATH
+folder such as `~/.local/bin` (on Windows it adds `~/.vrata-bb/bin` to the user
 PATH). bb never replaces another `bb`: install is refused while one runs first
 in a new terminal. Only an installed bb (`npx bb-app` or the desktop app)
 offers this; a source checkout does not.

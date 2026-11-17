@@ -1,5 +1,7 @@
 # @bb/mobile
 
+The mobile build, E2E and release workflows described below belong to upstream BB and are not installed in Vrata Desktop. This fork releases only Desktop; see the [current workflow policy](../../CONTRIBUTING.md#updating-from-upstream). Local mobile sources and development commands remain available.
+
 Native iOS/Android client for bb (Expo SDK 58, React Native 0.88, Expo
 Router, NativeWind v5).
 

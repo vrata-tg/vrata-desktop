@@ -1,7 +1,7 @@
 {
-  "appId": "dev.bb.desktop",
-  "productName": "bb",
-  "artifactName": "${productName}-${version}-${arch}.${ext}",
+  "appId": "tg.vrata.bb",
+  "productName": "Vrata Desktop",
+  "artifactName": "vrata-bb-${version}-${arch}.${ext}",
   "toolsets": {
     "appimage": "1.0.3"
   },
@@ -33,14 +33,14 @@
     {
       "channel": "latest",
       "provider": "generic",
-      "url": "https://github.com/get-bb/bb/releases/download/desktop-latest/"
+      "url": "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/"
     }
   ],
   "mac": {
     "category": "public.app-category.developer-tools",
     "extendInfo": {
-      "NSAppleEventsUsageDescription": "bb lets agents you run control other apps on this Mac, such as Computer Use.",
-      "NSMicrophoneUsageDescription": "bb uses your microphone for voice input and sites you allow in the in-app browser."
+      "NSAppleEventsUsageDescription": "Vrata Desktop lets agents you run control other apps on this Mac, such as Computer Use.",
+      "NSMicrophoneUsageDescription": "Vrata Desktop uses your microphone for voice input and sites you allow in the in-app browser."
     },
     "minimumSystemVersion": "13.0.0",
     "entitlements": "build/entitlements.mac.plist",
@@ -48,8 +48,6 @@
     "gatekeeperAssess": false,
     "hardenedRuntime": true,
     "icon": "assets/icon.icns",
-    "identity": null,
-    "notarize": false,
     "target": [
       {
         "target": "dmg",
@@ -63,12 +61,12 @@
   },
   "linux": {
     "category": "Development",
-    "executableName": "bb",
+    "executableName": "vrata-bb",
     "icon": "assets/icon.png",
     "target": [{ "target": "AppImage", "arch": ["x64"] }]
   },
   "win": {
-    "icon": "assets/icon.png",
+    "icon": "assets/icon.ico",
     "target": [{ "target": "nsis", "arch": ["x64"] }]
   },
   "nsis": {

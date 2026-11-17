@@ -3,30 +3,26 @@ import {
   type BbDesktopVersionFeedPlatform,
 } from "@bb/desktop-contract";
 
-type DesktopReleaseChannel = "latest" | "nightly";
+type DesktopReleaseChannel = "latest";
 
 interface DesktopReleaseInfo {
-  appId: "dev.bb.desktop" | "dev.bb.desktop.nightly";
-  applicationName: "bb" | "bb Nightly";
+  appId: "tg.vrata.bb";
+  applicationName: "Vrata Desktop";
   channel: DesktopReleaseChannel;
-  iconFileName: "icon.png" | "icon-nightly.png";
-  releaseTag: "desktop-latest" | "desktop-nightly";
+  iconFileName: "icon.png";
   updateReleaseBaseUrl: string;
 }
 
 export function createDesktopReleaseInfo(
   channel: DesktopReleaseChannel,
 ): DesktopReleaseInfo {
-  const nightly = channel === "nightly";
-  const releaseTag = nightly ? "desktop-nightly" : "desktop-latest";
-
   return {
-    appId: nightly ? "dev.bb.desktop.nightly" : "dev.bb.desktop",
-    applicationName: nightly ? "bb Nightly" : "bb",
+    appId: "tg.vrata.bb",
+    applicationName: "Vrata Desktop",
     channel,
-    iconFileName: nightly ? "icon-nightly.png" : "icon.png",
-    releaseTag,
-    updateReleaseBaseUrl: `https://github.com/get-bb/bb/releases/download/${releaseTag}/`,
+    iconFileName: "icon.png",
+    updateReleaseBaseUrl:
+      "https://github.com/vrata-tg/vrata-desktop/releases/latest/download/",
   };
 }
 
@@ -36,12 +32,12 @@ function resolveBuiltDesktopReleaseChannel(
   if (rawChannel === undefined || rawChannel.length === 0) {
     return "latest";
   }
-  if (rawChannel === "latest" || rawChannel === "nightly") {
+  if (rawChannel === "latest") {
     return rawChannel;
   }
 
   throw new Error(
-    `Built desktop release channel must be latest or nightly, got ${String(rawChannel)}.`,
+    `Built desktop release channel must be latest, got ${String(rawChannel)}.`,
   );
 }
 
@@ -51,8 +47,7 @@ export const DESKTOP_RELEASE_CHANNEL = resolveBuiltDesktopReleaseChannel(
 export const DESKTOP_RELEASE_INFO = createDesktopReleaseInfo(
   DESKTOP_RELEASE_CHANNEL,
 );
-const DESKTOP_UPDATE_RELEASE_BASE_URL =
-  DESKTOP_RELEASE_INFO.updateReleaseBaseUrl;
+const DESKTOP_UPDATE_RELEASE_BASE_URL = DESKTOP_RELEASE_INFO.updateReleaseBaseUrl;
 
 export function createDesktopUpdateFeedUrl(
   platform: BbDesktopVersionFeedPlatform,

@@ -186,38 +186,41 @@ describe("machine enroll", () => {
     });
   });
 
-  it("uses the default BB data directory only when it already holds this machine", async () => {
-    const h = await harness();
-    const defaultDir = join(h.dir, ".bb");
-    h.env.BB_DATA_DIR = defaultDir;
-    await expect(h.run()).rejects.toThrow(
-      "cannot use the default BB data directory",
-    );
-    await mkdir(defaultDir);
-    await writeFile(join(defaultDir, "host-id"), "host_other\n");
-    h.env.BB_ENROLLMENT = JSON.stringify({ ...bundle(), reconnect: true });
-    await expect(h.run()).rejects.toThrow(
-      "cannot use the default BB data directory",
-    );
-    expect(h.fetchFn).not.toHaveBeenCalled();
-    await writeFile(join(defaultDir, "host-id"), "host_test\n");
-    await writeFile(
-      join(defaultDir, "auth.json"),
-      JSON.stringify({ hostId: "host_test", hostKey: "moved-server-key" }),
-    );
-    await writeFile(
-      join(defaultDir, "config.json"),
-      JSON.stringify({
-        serverUrl: "https://server.example",
-        serverHeaders: { "x-access-token": "old-access" },
-      }),
-    );
-    h.env.BB_ENROLLMENT = JSON.stringify({ ...bundle(), reconnect: true });
-    await expect(h.run()).resolves.toEqual({ hostId: "host_test" });
-    expect(
-      JSON.parse(await readFile(join(defaultDir, "auth.json"), "utf8")),
-    ).toEqual({ hostId: "host_test", hostKey: "private-durable" });
-  });
+  it.each([".bb", ".vrata-bb"])(
+    "uses %s only when it already holds this machine",
+    async (directory) => {
+      const h = await harness();
+      const defaultDir = join(h.dir, directory);
+      h.env.BB_DATA_DIR = defaultDir;
+      await expect(h.run()).rejects.toThrow(
+        "cannot use the default BB data directory",
+      );
+      await mkdir(defaultDir);
+      await writeFile(join(defaultDir, "host-id"), "host_other\n");
+      h.env.BB_ENROLLMENT = JSON.stringify({ ...bundle(), reconnect: true });
+      await expect(h.run()).rejects.toThrow(
+        "cannot use the default BB data directory",
+      );
+      expect(h.fetchFn).not.toHaveBeenCalled();
+      await writeFile(join(defaultDir, "host-id"), "host_test\n");
+      await writeFile(
+        join(defaultDir, "auth.json"),
+        JSON.stringify({ hostId: "host_test", hostKey: "moved-server-key" }),
+      );
+      await writeFile(
+        join(defaultDir, "config.json"),
+        JSON.stringify({
+          serverUrl: "https://server.example",
+          serverHeaders: { "x-access-token": "old-access" },
+        }),
+      );
+      h.env.BB_ENROLLMENT = JSON.stringify({ ...bundle(), reconnect: true });
+      await expect(h.run()).resolves.toEqual({ hostId: "host_test" });
+      expect(
+        JSON.parse(await readFile(join(defaultDir, "auth.json"), "utf8")),
+      ).toEqual({ hostId: "host_test", hostKey: "private-durable" });
+    },
+  );
 
   it("reconnects in the data directory the server recorded when BB_DATA_DIR is unset", async () => {
     const h = await harness();

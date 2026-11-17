@@ -1,8 +1,9 @@
 # Configuration
 
-The packaged `npx bb-app` flow stores persistent package settings under
-`~/.bb/config.json`, provider environment values under `~/.bb/env.json`, and
-client SSH target mappings under `~/.bb/client.json`.
+Vrata Desktop and its bundled `bb-app` store persistent package settings under
+`~/.vrata-bb/config.json`, provider environment values under `~/.vrata-bb/env.json`, and
+client SSH target mappings under `~/.vrata-bb/client.json`. These defaults describe
+Vrata Desktop; a separate upstream BB installation keeps its own data and ports.
 
 Use `bb-app config` for non-secret bb settings and `bb-app env` for provider
 credentials and provider-specific environment:
@@ -110,8 +111,8 @@ For the packaged app, prefer `bb-app config`, `bb-app env`, and launcher flags
 over shell variables. Source-development commands still load `.env` files
 (see [Source Development](#source-development)).
 
-After `bb-app config` writes `~/.bb/config.json` or `bb-app env` writes
-`~/.bb/env.json`, it asks the running local server to reload. If bb is not
+After `bb-app config` writes `~/.vrata-bb/config.json` or `bb-app env` writes
+`~/.vrata-bb/env.json`, it asks the running local server to reload. If bb is not
 running, the new values apply on the next start. If you edit either file by
 hand, run `npx bb-app config refresh` to apply it to a running server.
 
@@ -143,7 +144,7 @@ A running `bb-app start` writes `<dataDir>/bb-app-runtime.json` (launcher
 process id, server URL, version, start time, and launch mode) and removes it on
 exit. Do not edit it. `npx bb-app stop` uses it to stop the bb that owns the
 data directory; pass the same `--data-dir` you started with when it is not the
-default `~/.bb/`. The macOS desktop app uses it to offer stopping a bb it did
+default `~/.vrata-bb/`. The macOS desktop app uses it to offer stopping a bb it did
 not start. Both verify the recorded process is a bb launcher before signalling
 it, so a stale file cannot stop an unrelated process.
 
@@ -246,10 +247,10 @@ change the host-daemon protocol.
 | `BB_EXTERNAL_URL`              | `bb-app env`, or environment                       | Startup-only            | Internet-facing HTTPS base URL for generated public links; the fallback for `machineServerUrl`.                                                                                                                                                                                                                                     |
 | `BB_MARKETPLACE_URL`           | `bb-app env`, or environment                       | Startup-only testing    | Manifest URL of the reserved `bb-community` marketplace. Default `https://getbb.app/marketplace/v2/marketplace.json` (falls back to v1 on 404); a custom URL is requested without fallback. Changes only `bb-community`.                                                                                                            |
 | `BB_CONNECT_GATE_KEYS_URL`     | `bb-app env`, or environment                       | Startup-only testing    | Public key set the bb connect next tunnel ingress verifies gate assertions with. Default `https://getbb.app/.well-known/bb-connect-gate-keys.json`. See [connect-next.md](connect-next.md).                                                                                                                                         |
-| `BB_SERVER_URL`                | `bb-app config`                                    | Remote CLI/host use     | Server targeted by the standalone `bb` CLI and `host-daemon` commands on this machine. Defaults to `http://127.0.0.1:38886`. It does not change where `npx bb-app` binds.                                                                                                                                                           |
+| `BB_SERVER_URL`                | `bb-app config`                                    | Remote CLI/host use     | Server targeted by the standalone `bb` CLI and `host-daemon` commands on this machine. Defaults to `http://127.0.0.1:38986`. It does not change where `npx bb-app` binds.                                                                                                                                                           |
 | `BB_SERVER_BIND_HOST`          | `bb-app env`, environment, or `--server-bind-host` | Startup-only            | Server listener host: `127.0.0.1` (default) or `0.0.0.0`. Not a `bb-app config` key. See [Startup Flags](#startup-flags).                                                                                                                                                                                                           |
-| `BB_SERVER_PORT`               | `bb-app env`, environment, or `--server-port`      | Startup-only            | HTTP listener port. Defaults to `38886`.                                                                                                                                                                                                                                                                                            |
-| `BB_HOST_DAEMON_PORT`          | `bb-app env`, environment, or `--host-daemon-port` | Startup-only            | Local host-daemon API port. Defaults to `38887`.                                                                                                                                                                                                                                                                                    |
+| `BB_SERVER_PORT`               | `bb-app env`, environment, or `--server-port`      | Startup-only            | HTTP listener port. Defaults to `38986`.                                                                                                                                                                                                                                                                                            |
+| `BB_HOST_DAEMON_PORT`          | `bb-app env`, environment, or `--host-daemon-port` | Startup-only            | Local host-daemon API port. Defaults to `38987`.                                                                                                                                                                                                                                                                                    |
 | `BB_LOG_LEVEL`                 | `bb-app config`                                    | Startup-only debugging  | `trace`, `debug`, `info`, `warn`, `error`, or `fatal`.                                                                                                                                                                                                                                                                              |
 | `BB_TELEMETRY`                 | `bb-app env`, or environment                       | Startup-only            | `false` always disables anonymous usage telemetry, overriding the `telemetryEnabled` setting.                                                                                                                                                                                                                                       |
 | `BB_SKIP_ONBOARDING`           | Environment                                        | Startup-only            | Default false. `1` marks first-run setup completed at startup when it is not yet, so the setup screen is skipped. Settings → General can still replay it. `pnpm dev`, `pnpm start:worktree`, and `pnpm desktop:worktree` default it to `1`; an explicit `0` retains setup.                                                          |
@@ -289,7 +290,7 @@ for the command surface.
 | `allowFastServiceTier`                                                     | `true`                              | Settings → Providers. `false` hides the service tier control and runs every new turn at the default tier, including explicit requests for another tier (`fast`, Codex `ultrafast`, or any tier a provider lists), automations, and queued messages. Completed turns and project defaults saved while off keep the default tier.                                                                                                                                                                                                                |
 | `managedBranchPrefix`                                                      | `bb/`                               | Settings → General → New branch prefix. Prefix for branches bb creates for worktrees and new checkout branches (`bb/fix-login-flow-thr_ab12cd34ef`); empty for none. At most 64 characters and must start a valid git branch name (no space or leading `-`). Existing branches and worktrees keep their names.                                                                                                                                                                                                                                 |
 | `providerOrder`                                                            | `[]`                                | Settings → Providers (move a provider up or down). JSON list of provider ids that lead the picker, such as `'["claude-code","codex"]'`; unlisted ids follow in plugin install order and unknown ids are ignored.                                                                                                                                                                                                                                                                                                                               |
-| `defaultProviderId`                                                        | `null`                              | Settings → Providers. Provider for new threads when neither caller nor project chose one; `null` means the first available provider in picker order.                                                                                                                                                                                                                                                                                                                                                                                           |
+| `defaultProviderId`                                                        | `"vrata"`                           | Settings → Providers. Provider for new threads when neither caller nor project chose one; `null` means the first available provider in picker order.                                                                                                                                                                                                                                                                                                                                                                                           |
 | `telemetryEnabled`                                                         | `true`                              | Settings → General → Privacy & diagnostics → Share anonymous usage data. Takes effect immediately; `BB_TELEMETRY=false` overrides it.                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `earlyAdopter`                                                             | `false`                             | Settings → Experiments → Become an early adopter. Turns on experiments marked Early adopter unless you set them yourself; see [Experiments](#experiments).                                                                                                                                                                                                                                                                                                                                                                                     |
 | `machineServerUrl`, `defaultMachineAccess`, `machineGitCredentialsEnabled` | See [Multi-machine](#multi-machine) | Machine access and credential forwarding.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -496,7 +497,7 @@ it fails, titles fall back to the start of the prompt and commits to
 `bb-cloud-ai` skill.
 
 The removed `BB_INFERENCE`, `BB_INFERENCE_FALLBACK`, and `BB_TRANSCRIPTION`
-keys are ignored with a warning in `~/.bb/config.json`, and `bb-app config set`
+keys are ignored with a warning in `~/.vrata-bb/config.json`, and `bb-app config set`
 refuses them.
 
 bb accepts voice recordings up to 25 MB; a service may set a lower limit, and
@@ -648,7 +649,7 @@ the current model's supported efforts from low to high.
 
 ## Client SSH Targets
 
-`~/.bb/client.json` is local to the machine showing the UI; the remote server
+`~/.vrata-bb/client.json` is local to the machine showing the UI; the remote server
 does not read it. It maps a server and work host to an SSH target (the value
 that works after `ssh`, such as `devbox`, `user@devbox`, or a `Host` entry in
 `~/.ssh/config`) so the local helper can open remote paths in local editors and
@@ -728,7 +729,7 @@ the registry's `npx` or `uvx` package on the thread's host.
 ## Custom Models
 
 Register extra picker models with top-level `customModels` in
-`~/.bb/config.json`, for a model the provider accepts but does not list. There
+`~/.vrata-bb/config.json`, for a model the provider accepts but does not list. There
 is no set/unset CLI: edit the JSON, then run `npx bb-app config refresh` or
 restart bb. `bb-app config list` prints the entries.
 
@@ -770,7 +771,7 @@ remain separate. See `bb guide agent-configuration`.
 ## Skills
 
 User-level skills live under `<dataDir>/skills/<name>/SKILL.md` (usually
-`~/.bb/skills`). Project skills live under
+`~/.vrata-bb/skills`). Project skills live under
 `<workspace>/.bb/skills/<name>/SKILL.md`. Enabled plugins contribute
 `skills/<name>/SKILL.md` (relocatable with the manifest's `bb.skills` field).
 Project skills override user skills, which override plugin skills, by name.
@@ -796,7 +797,7 @@ path from Codex's active catalog, matched by catalog name or skill directory nam
 for both starting and steering a turn; a selected skill missing from that
 catalog is sent as plain text only.
 
-Top-level `sharedSkillRoots` in `~/.bb/config.json` adds one provider-neutral
+Top-level `sharedSkillRoots` in `~/.vrata-bb/config.json` adds one provider-neutral
 skill collection: `{"user": [...], "project": [...]}` relative paths, resolved
 from the home directory and the workspace. bb indexes them read-only and
 injects selected skills into every provider; bb user and project skills win on
@@ -858,7 +859,8 @@ opt out.
 ### Machine installer
 
 `BB_DATA_DIR` on the installer selects the machine's state directory instead of
-`~/.bb-machines/<server-host>`. Enrollment refuses the default `~/.bb` unless its
+`~/.bb-machines/<server-host>`. Enrollment refuses the Vrata default
+`~/.vrata-bb` and the upstream BB default `~/.bb` unless the selected directory's
 `host-id` already names this machine.
 
 On Linux the installer installs a persistent systemd user service, retrying with
@@ -1583,7 +1585,7 @@ also publish the port. With wildcard binding the startup `Server listening`
 and `app` lines show `http://0.0.0.0:<port>`.
 
 The data directory holds all bb-managed state: the SQLite database, logs, host
-identity, thread storage, custom themes, and plugins. It defaults to `~/.bb/`
+identity, thread storage, custom themes, and plugins. It defaults to `~/.vrata-bb/`
 for the packaged app. Use `--data-dir` for fully isolated instances.
 
 Other launcher flags: `--no-in-app-updates` ([In-App Updates](#in-app-updates))

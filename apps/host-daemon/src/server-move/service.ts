@@ -5,11 +5,12 @@ import {
 import { timingSafeEqual } from "node:crypto";
 import { mkdir, rename, rm } from "node:fs/promises";
 import { homedir } from "node:os";
-import { isAbsolute, join, resolve } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { readBbAppRuntimeFile } from "@bb/config/app-runtime-file";
 import { resolveCodexHome } from "@bb/config/codex-home";
 import { isLoopbackHostname } from "@bb/config/loopback";
+import { resolveProdDataDir } from "@bb/config/runtime";
 import { createNodeVerifiedProcessOps } from "@bb/config/verified-process-stop";
 import type { ServerMoveStepId } from "@bb/domain";
 import type {
@@ -144,7 +145,6 @@ const PROGRESS_INTERVAL_MS = 1_000;
 const BB_APP_MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 * 1024;
 const SERVER_DATABASE_PATHS = ["bb.db", "bb.db-wal", "bb.db-shm"] as const;
 const HOST_ARTIFACT_DIGEST_FILE_NAME = "host-artifact.sha256";
-const STANDALONE_DATA_DIR_NAME = ".bb";
 const SERVER_DATABASE_FILE_NAME = "bb.db";
 const SERVER_MOVE_LOG_FILE_NAME = "server-move.log";
 const INSTALL_DAEMON_PID_FILE_NAME = "install-daemon.pid";
@@ -305,7 +305,7 @@ export class ServerMoveService {
   ): Promise<HostDaemonOnlineRpcResult<"server_move.inspect">> {
     const { dataDir, homeDir } = this.options;
     const shellEnv = this.options.getShellEnv();
-    const standaloneDataDir = join(homeDir, STANDALONE_DATA_DIR_NAME);
+    const standaloneDataDir = resolveProdDataDir({ homeDir });
     const incomingMoveIds = await listIncomingMoveIds(dataDir);
     const staleMoves = await this.listStaleMoves(incomingMoveIds);
     const journalStatus = await readServerImportJournalStatus(dataDir).catch(
@@ -938,15 +938,14 @@ export class ServerMoveService {
   private standaloneDataDirIsOwnDataDir(): Promise<boolean> {
     return isSameOrInsidePath(
       this.options.dataDir,
-      join(this.options.homeDir, STANDALONE_DATA_DIR_NAME),
+      resolveProdDataDir({ homeDir: this.options.homeDir }),
     );
   }
 
   private async assertStandaloneDataDirNotRunning(): Promise<void> {
-    const standaloneDataDir = join(
-      this.options.homeDir,
-      STANDALONE_DATA_DIR_NAME,
-    );
+    const standaloneDataDir = resolveProdDataDir({
+      homeDir: this.options.homeDir,
+    });
     if (
       !(await pathExists(join(standaloneDataDir, SERVER_DATABASE_FILE_NAME)))
     ) {
@@ -1456,10 +1455,9 @@ export class ServerMoveService {
   private async archiveStandaloneServerData(
     moveId: string,
   ): Promise<IncomingMoveState["archivedServerData"]> {
-    const originalPath = resolve(
-      this.options.homeDir,
-      STANDALONE_DATA_DIR_NAME,
-    );
+    const originalPath = resolveProdDataDir({
+      homeDir: this.options.homeDir,
+    });
     if (!(await pathExists(join(originalPath, SERVER_DATABASE_FILE_NAME)))) {
       return null;
     }

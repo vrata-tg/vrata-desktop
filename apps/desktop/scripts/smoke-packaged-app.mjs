@@ -47,8 +47,6 @@ function writeNotFound(response) {
 function createDesktopVersionFeed(platform, version) {
   return {
     schemaVersion: 1,
-    // The app rejects a feed whose channel is not its own, so a nightly
-    // packaged build must be smoked against a nightly feed.
     channel: releaseChannel,
     platform,
     version,
@@ -151,7 +149,7 @@ async function startSmokeServer({
           placeholder: false,
         },
         generalSettings: {},
-        hostDaemonPort: 38887,
+        hostDaemonPort: 38987,
         primaryHostPlatform: null,
         voiceTranscriptionEnabled: false,
       });

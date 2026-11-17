@@ -264,7 +264,14 @@ export async function generateBbOfficialMarketplace(args: {
         plugin.name,
       );
       const packageJson: unknown = JSON.parse(
-        await readFile(path.join(pluginDirectory, "package.json"), "utf8"),
+        await readFile(
+          path.join(
+            pluginDirectory,
+            ...(plugin.name === "vrata" ? [".bundled-runtime"] : []),
+            "package.json",
+          ),
+          "utf8",
+        ),
       );
       const overview = await readBundledPluginOverview(
         pluginDirectory,

@@ -1,0 +1,20 @@
+{
+  "name": "@vrata-desktop/bundled-plugin",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:bundled": "node --conditions=source --import tsx prepare-bundled.mjs",
+    "test": "node --conditions=source --import tsx --test published-host.test.mjs runtime.test.mjs"
+  },
+  "dependencies": {
+    "@vrata-ai/bb-plugin": "0.1.13",
+    "@get-bb/plugin-sdk": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@bb/domain": "workspace:*",
+    "@bb/plugin-build": "workspace:*",
+    "react": "^19.3.0"
+  }
+}
