@@ -281,8 +281,9 @@ original migration base is BB `0.49.0`, upstream SHA
 `1320c88e8abdd3f145bc9a5c305eace269fb2f28`; release notes record this separately
 from the Vrata Desktop version and the exact bundled plugin pin.
 
-1. Before merging or enabling Actions, complete the inherited publishing workflow
-   review in [CONTRIBUTING.md](../../CONTRIBUTING.md#updating-from-upstream).
+1. Review the two-workflow policy in
+   [CONTRIBUTING.md](../../CONTRIBUTING.md#updating-from-upstream) and remove any
+   unrelated workflows reintroduced by an upstream merge.
 2. Merge the reviewed version/plugin changes into `main`.
 3. Open Actions → Vrata Desktop → Run workflow, select `main`, and leave
    `publish=false`. Wait for all three builds and the final full-artifact check.

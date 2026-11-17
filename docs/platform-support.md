@@ -197,27 +197,18 @@ rebuild the native dependency, for example `npm rebuild better-sqlite3`.
 
 ## CI And Validation
 
-- GitHub Actions uses Ubuntu as the required support gate for build,
-  typecheck, lint, test, and Linux smoke coverage.
-- Full build, typecheck, lint, and test checks run on Ubuntu with Node.js 22
-  only.
-- Pull requests run the `bb-app` tarball smoke on Ubuntu and macOS with Node.js
-  22, validating the packed npm artifact through `npx --package`.
-- Pushes to `main` and manually dispatched CI runs also run the `bb-app` tarball
-  smoke on Ubuntu and macOS with Node.js 24 and 26.
-- Branch protection should require `Checks (ubuntu-latest, Node 22.x)`,
-  `Package Smoke (ubuntu-latest, Node 22.x)`, and
-  `Package Smoke (macos-latest, Node 22.x)`. The Node.js 24 and 26 compatibility
-  smoke jobs do not run on pull requests and should not be configured as
-  required PR checks.
-- Native Windows CI runs on every pull request, described in
-  [windows-ci.md](windows-ci.md): the host package tests with lint and
-  typecheck, the remaining test suites in seven shards, and an app smoke that
-  boots `bb-app`, runs the `bb-app` tarball smoke, packages the desktop app, and
-  smoke tests the packaged app.
-- `apps/mobile` typecheck, lint, and unit tests run inside the Ubuntu
-  `Checks` and the `Tests (packages-*)` jobs like every other workspace package. The
-  iOS simulator Maestro flows run in `Mobile E2E`
-  (`.github/workflows/mobile-e2e.yml`) on the macOS runner only when a pull
-  request carries the `mobile-e2e` label, nightly on `main`, or on manual
-  dispatch; they are not a required check.
+Vrata Desktop uses `.github/workflows/vrata-desktop.yml` for pull-request and
+manual builds on macOS arm64, Linux x64 and Windows x64. All three targets run
+focused integration tests, packaging, packaged-app smoke tests and feed checks;
+a final job verifies the combined artifacts. Linux and macOS also run the
+integration typechecks. The pinned `tsrs` compiler does not support Windows,
+so Windows declaration bundling is not a full Windows typecheck.
+
+`version-lockstep.yml` separately checks Desktop/`bb-app` versions and Plugin SDK
+version changes on Ubuntu. These are the fork's only workflows. Upstream npm,
+mobile, deployment and broad CI workflows are removed. Local package tests and
+Turbo tasks remain available; the focused desktop workflow does not run the
+whole upstream test matrix.
+
+Public releases require a manual run on `main`; see the
+[release guide](../apps/desktop/README.md#releasing).

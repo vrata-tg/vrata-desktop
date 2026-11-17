@@ -1,5 +1,7 @@
 # Windows CI
 
+This document describes the upstream Blacksmith CI design. Vrata Desktop has removed that workflow. Its Windows build uses `windows-2025` in [`vrata-desktop.yml`](../.github/workflows/vrata-desktop.yml); see [current CI coverage](platform-support.md#ci-and-validation). The sharding and cache descriptions below are upstream reference only.
+
 Every Windows job in `.github/workflows/ci.yml` runs on Blacksmith Windows
 Server 2025 x64 alongside the Linux checks. Main pushes run all of them; pull
 requests run the jobs that [PR selection](ci-performance.md#pr-selection)

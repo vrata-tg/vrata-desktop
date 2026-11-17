@@ -84,7 +84,7 @@ not automatically deletable; the authoring gate still rejects new ones.
 
 Before judging a candidate, read the complete test and production owner, its
 entry point, callers, callees, sibling implementations, overlapping tests, CI
-routing (`turbo.json` task inputs and `.github/workflows/ci.yml` shards), and
+routing (`turbo.json` task inputs and `.github/workflows/vrata-desktop.yml`), and
 relevant history. Read `AGENTS.md` first. When the test claims
 dependency-backed behavior, inspect the dependency source or types directly.
 
@@ -213,8 +213,8 @@ it overwrites them. Commit a WIP first, then compare through
 
 ## Landing and continuation
 
-Commit, push, open a PR, or land only when authorized. Fill
-`.github/PULL_REQUEST_TEMPLATE.md` and end the body with `> AGENT GENERATED`.
+Commit, push, open a PR, or land only when authorized. Describe the change and
+verification in natural prose, following the Vrata Desktop PR policy in `AGENTS.md`.
 Use the `close-out` skill to land when it is available. Land one coherent PR
 at a time; after landing, refresh from current `main` and rerun read-only
 discovery for the next high-confidence batch.

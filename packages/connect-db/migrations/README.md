@@ -1,5 +1,7 @@
 # Connect DB migrations (Postgres)
 
+The automated deployment order described below is upstream BB infrastructure. Vrata Desktop has removed the deployment workflows and does not deploy these services on merge; see the [workflow policy](../../../CONTRIBUTING.md#updating-from-upstream).
+
 These are the Postgres migrations for the shared connect database, generated
 by Drizzle Kit from `src/schema.ts`. `@bb/connect-db-pg` applies them in
 journal order (`pnpm --filter @bb/connect-db-pg run db:migrate`) and records
