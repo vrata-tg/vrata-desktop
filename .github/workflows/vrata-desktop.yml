@@ -64,6 +64,7 @@ jobs:
           pnpm exec turbo run test:vrata-release --output-logs=errors-only
           node scripts/vrata-release.mjs --check-config
       - name: Typecheck desktop integration
+        if: matrix.platform != 'windows'
         run: pnpm exec turbo run typecheck --filter=@bb/desktop --filter=bb-app --filter=@bb/app --filter=@bb/server --filter=@bb/cli --filter=@bb/host-daemon --output-logs=errors-only
       - name: Test onboarding
         run: pnpm exec turbo run test --filter=@bb/app --output-logs=errors-only -- VrataOnboardingGate
